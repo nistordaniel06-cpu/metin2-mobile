@@ -1,0 +1,151 @@
+name: Android - Single Player ARM64
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/android-offline.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-offline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+      GRADLE_OPTS: '-Dorg.gradle.workers.max=2 -Dorg.gradle.jvmargs=-Xmx3g'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.1.1'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake build-essential libsodium23 liblzo2-2 python3-pil rsync zip patch
+          sdkmanager 'platforms;android-33' 'build-tools;33.0.1' 'ndk;25.2.9519653' 'cmake;3.22.1'
+          df -h .
+
+      - name: Fetch compatible game inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout_revision() {
+            local name="$1" revision="$2"
+            git init "$RUNNER_TEMP/$name"
+            git -C "$RUNNER_TEMP/$name" remote add origin "https://github.com/d1str4ught/$name.git"
+            git -C "$RUNNER_TEMP/$name" fetch --depth=1 origin "$revision"
+            git -C "$RUNNER_TEMP/$name" checkout --detach FETCH_HEAD
+            git -C "$RUNNER_TEMP/$name" submodule update --init --recursive
+          }
+          checkout_revision m2dev-server-src 66068c1bd58a8cbdf2b891c3f119dc6631cb1fc1
+          checkout_revision m2dev-server ad30738c0671e20beca649c7b3fa4234aba0f598
+          checkout_revision m2dev-client 98d2c1afb91cd5c1ef816de332e8b92141002bd4
+
+      - name: Prepare game data and Python standard library
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_dir="$GITHUB_WORKSPACE/r10dev.net OPENGL-ITJA/android"
+          bash "$android_dir/tools/stage_client_data.sh" "$RUNNER_TEMP/m2dev-client" "$RUNNER_TEMP/m2stage" en
+          curl --fail --location --retry 3 https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz -o "$RUNNER_TEMP/python.tgz"
+          tar -xzf "$RUNNER_TEMP/python.tgz" -C "$RUNNER_TEMP"
+          cp -a "$RUNNER_TEMP/Python-2.7.18/Lib" "$RUNNER_TEMP/m2pylib"
+
+      - name: Prepare embedded server and local account
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash 'r10dev.net OPENGL-ITJA/server/tools/make-server-pack.sh' \
+            "$RUNNER_TEMP/m2dev-server" "$RUNNER_TEMP/m2dev-server-src" "$RUNNER_TEMP/m2serverpack" 'test:test123'
+
+      - name: Configure isolated ARM64 single-player profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_dir="$GITHUB_WORKSPACE/r10dev.net OPENGL-ITJA/android"
+          cat > "$android_dir/profiles/nistor.properties" <<'PROFILE'
+          m2.abi=arm64-v8a
+          m2.serverMode=embedded
+          m2.serverHost=127.0.0.1
+          m2.authPort=11000
+          m2.channelPort=11011
+          m2.dataBundled=true
+          m2.dataUrl=
+          m2.versionName=nistor-offline
+          m2.applicationIdSuffix=.nistor.offline
+          m2.appLabel=Metin2 Nistor
+          m2.serverListUrl=
+          m2.devUrl=
+          m2.updateChannel=
+          PROFILE
+          echo "m2.dataVersion=$GITHUB_RUN_NUMBER" >> "$android_dir/profiles/nistor.properties"
+          printf '%s\n' '{"version":1,"servers":[{"name":"Single Player","embedded":true}]}' > "$android_dir/servers/servers.json"
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > "$android_dir/local.properties"
+
+      - name: Build bundled APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          export M2_CLIENT_DATA="$RUNNER_TEMP/m2stage"
+          export M2_PYLIB="$RUNNER_TEMP/m2pylib"
+          export M2_SERVER_PACK="$RUNNER_TEMP/m2serverpack"
+          export M2_SERVER_SRC="$RUNNER_TEMP/m2dev-server-src"
+          export M2_BUNDLE_OUT="$RUNNER_TEMP/m2bundle"
+          export GRADLE="$(command -v gradle)"
+          bash 'r10dev.net OPENGL-ITJA/android/tools/make_bundle.sh' nistor "$GITHUB_RUN_NUMBER"
+          mkdir -p "$RUNNER_TEMP/apk-output"
+          cp "$M2_BUNDLE_OUT/metin2-nistor-offline-$GITHUB_RUN_NUMBER.apk" "$RUNNER_TEMP/apk-output/Metin2-Nistor-ARM64.apk"
+
+      - name: Verify APK contents and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$RUNNER_TEMP/apk-output/Metin2-Nistor-ARM64.apk"
+          "$ANDROID_HOME/build-tools/33.0.1/apksigner" verify "$apk"
+          python3 - "$apk" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              names = set(archive.namelist())
+              required = {'assets/m2data.zip', 'lib/arm64-v8a/libmetin2_mobile.so', 'lib/arm64-v8a/libm2db.so', 'lib/arm64-v8a/libm2game.so'}
+              missing = required - names
+              if missing:
+                  raise SystemExit('Missing APK entries: ' + ', '.join(sorted(missing)))
+          PY
+          cd "$RUNNER_TEMP/apk-output"
+          sha256sum Metin2-Nistor-ARM64.apk > SHA256SUMS.txt
+          printf '%s\n' 'Experimental ARM64 build. Login offline: test / test123.' 'Not verified on a physical phone. No GM configuration yet.' 'Keep this bundled-data build for personal testing; do not publish it as a release.' 'Debug signing may change between builds: do not uninstall an existing copy containing progress without a backup.' > README.txt
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Metin2-Nistor-ARM64
+          path: ${{ runner.temp }}/apk-output/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Build summary
+        if: success()
+        run: |
+          echo 'APK experimental ARM64 generat. Descarca artifactul Metin2-Nistor-ARM64.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Cont local: test / test123. Testul pe telefon si configurarea GM raman de facut.' >> "$GITHUB_STEP_SUMMARY"
+
