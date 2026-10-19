@@ -1,10 +1,6 @@
-name: Build Metin2 Android APK
+name: Legacy - Emulator APK (manual)
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
