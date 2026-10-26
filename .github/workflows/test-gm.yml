@@ -1,0 +1,30 @@
+name: Test GM permissions
+
+on:
+  pull_request:
+    paths:
+      - 'r10dev.net OPENGL-ITJA/server/hosted/gm.sh'
+      - 'r10dev.net OPENGL-ITJA/server/hosted/tests/**'
+      - '.github/workflows/test-gm.yml'
+  push:
+    branches: [main, feature/nistor-v2-combat]
+    paths:
+      - 'r10dev.net OPENGL-ITJA/server/hosted/gm.sh'
+      - 'r10dev.net OPENGL-ITJA/server/hosted/tests/**'
+      - '.github/workflows/test-gm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gm:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SQLite CLI
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+      - name: Check GM script syntax
+        run: bash -n 'r10dev.net OPENGL-ITJA/server/hosted/gm.sh'
+      - name: Test GM authorization database changes
+        run: bash 'r10dev.net OPENGL-ITJA/server/hosted/tests/test_gm.sh'
