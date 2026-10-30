@@ -181,14 +181,20 @@ class _Wheel(ui.Window):
 		self.dim.Show()
 		self.discs = []
 		cx, cy = w / 2, h / 2 - 10
+		# Keep twelve touch targets separated on landscape phone displays.
+		# Preserve the original layout for smaller menus.
+		count = len(entries)
+		radius = max(self.RADIUS, (self.ITEM + 20) * count / (2.0 * math.pi))
+		radius = min(radius, max(self.ITEM, w / 2 - self.ITEM))
+		vertical = min(radius * 0.78, max(self.ITEM, h / 2 - self.ITEM - 24))
 		for i, (label, icon, crop, action) in enumerate(entries):
-			a = -math.pi / 2 + 2 * math.pi * i / len(entries)
+			a = -math.pi / 2 + 2 * math.pi * i / count
 			d = _Disc(self.ITEM, self.__Choose(action))
 			d.SetParent(self)
 			d.SetIcon(icon, 0.5, crop)
 			d.SetLabel(label, True)
-			d.SetPosition(int(cx + self.RADIUS * math.cos(a)) - self.ITEM / 2,
-					int(cy + self.RADIUS * 0.78 * math.sin(a)) - self.ITEM / 2)
+			d.SetPosition(int(cx + radius * math.cos(a)) - self.ITEM / 2,
+					int(cy + vertical * math.sin(a)) - self.ITEM / 2)
 			self.discs.append(d)
 		self.Hide()
 
@@ -599,6 +605,15 @@ class MobileHud(ui.Window):
 		else:
 			self.game.ShowName()
 
+	def __OpenGMConsole(self):
+		# Client UI only: server remains responsible for GM authorization.
+		try:
+			self.game.consoleEnable = True
+			self.game.ShowConsole()
+		except (AttributeError, RuntimeError):
+			import chat
+			chat.AppendChat(chat.CHAT_TYPE_INFO, "GM console unavailable in this build")
+
 	def __WheelEntries(self):
 		i = self.game.interface
 		return (
@@ -613,6 +628,7 @@ class MobileHud(ui.Window):
 			("Names", T + "g.sub", FRAMED, self.__ToggleNames),
 			("Ride", T + "mouse_button_move_and_attack_01.sub", FRAMED, lambda: net.SendChatPacket("/ride")),
 			("Settings", T + "system_button_01.sub", FRAMED, i.ToggleSystemDialog),
+			("GM", T + "character_button_01.sub", FRAMED, self.__OpenGMConsole),
 		)
 
 	def ApplyMode(self):

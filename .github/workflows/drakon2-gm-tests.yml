@@ -1,0 +1,66 @@
+name: Drakon2 GM policy tests
+
+on:
+  push:
+    paths:
+      - 'server/gm/**'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uimobilehud.py'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uidevoptions.py'
+      - '.github/workflows/drakon2-gm-tests.yml'
+  pull_request:
+    paths:
+      - 'server/gm/**'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uimobilehud.py'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uidevoptions.py'
+      - '.github/workflows/drakon2-gm-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gm-policy:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile GM permission tests
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            server/gm/test_gm_command_policy.cpp -o /tmp/drakon2-gm-test
+      - name: Run tests
+        run: /tmp/drakon2-gm-test
+      - name: Validate Android GM touch entry
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          root = Path('r10dev.net OPENGL-ITJA/android/tools/data-overlay')
+          hud = (root / 'uimobilehud.py').read_text()
+          dev = (root / 'uidevoptions.py').read_text()
+          ast.parse(hud)
+          ast.parse(dev)
+          assert 'self.__OpenGMConsole' in hud
+          assert 'def __OpenGMConsole(self):' in hud
+          assert 'self.game.ShowConsole()' in hud
+          assert 'GM Console' in dev
+          assert 'def OnConsole(self):' in dev
+          print('Android GM menu wiring and Python syntax OK')
+          PY
+
+      - name: Guard installed Single Player app identity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path('r10dev.net OPENGL-ITJA/android')
+          gradle = (root / 'app/build.gradle').read_text()
+          profile = (root / 'profiles/bundled.properties').read_text()
+          props = dict(re.findall(r'^([\w.]+)\s*=\s*([^\n#]*)', profile, re.M))
+          assert 'applicationId "com.metin2.client"' in gradle
+          assert props['m2.applicationIdSuffix'].strip() == '.offline'
+          assert props['m2.serverMode'].strip() == 'embedded'
+          assert props['m2.dataBundled'].strip() == 'true'
+          print('Offline Android package identity preserved: com.metin2.client.offline')
+          print('Note: identical signing certificate is still required to update an installed APK')
+          PY

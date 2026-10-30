@@ -3,8 +3,11 @@ name: Android - Single Player ARM64
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths: [.github/workflows/android-offline.yml]
+    branches: [main, feature/romania-multiplayer-foundation]
+    paths:
+      - '.github/workflows/android-offline.yml'
+      - 'r10dev.net OPENGL-ITJA/android/**'
+      - 'r10dev.net OPENGL-ITJA/server/**'
 
 permissions:
   contents: read
@@ -93,9 +96,9 @@ jobs:
           m2.channelPort=11011
           m2.dataBundled=true
           m2.dataUrl=
-          m2.versionName=nistor-offline
-          m2.applicationIdSuffix=.nistor.offline
-          m2.appLabel=Metin2 Nistor
+          m2.versionName=drakon2-test
+          m2.applicationIdSuffix=.drakon2.test
+          m2.appLabel=Drakon2 Test
           m2.serverListUrl=
           m2.devUrl=
           m2.updateChannel=
@@ -116,13 +119,13 @@ jobs:
           export GRADLE="$(command -v gradle)"
           bash 'r10dev.net OPENGL-ITJA/android/tools/make_bundle.sh' nistor "$GITHUB_RUN_NUMBER"
           mkdir -p "$RUNNER_TEMP/apk-output"
-          cp "$M2_BUNDLE_OUT/metin2-nistor-offline-$GITHUB_RUN_NUMBER.apk" "$RUNNER_TEMP/apk-output/Metin2-Nistor-ARM64.apk"
+          cp "$M2_BUNDLE_OUT/metin2-nistor-offline-$GITHUB_RUN_NUMBER.apk" "$RUNNER_TEMP/apk-output/Drakon2-Test-ARM64.apk"
 
       - name: Verify APK contents and signature
         shell: bash
         run: |
           set -euo pipefail
-          apk="$RUNNER_TEMP/apk-output/Metin2-Nistor-ARM64.apk"
+          apk="$RUNNER_TEMP/apk-output/Drakon2-Test-ARM64.apk"
           "$ANDROID_HOME/build-tools/33.0.1/apksigner" verify "$apk"
           python3 - "$apk" <<'PY'
           import sys, zipfile
@@ -134,21 +137,21 @@ jobs:
                   raise SystemExit('Missing APK entries: ' + ', '.join(sorted(missing)))
           PY
           cd "$RUNNER_TEMP/apk-output"
-          sha256sum Metin2-Nistor-ARM64.apk > SHA256SUMS.txt
-          printf '%s\n' 'Experimental ARM64 build. Login offline: test / test123.' 'Not verified on a physical phone. No GM configuration yet.' 'Keep this bundled-data build for personal testing; do not publish it as a release.' 'Debug signing may change between builds: do not uninstall an existing copy containing progress without a backup.' > README.txt
+          sha256sum Drakon2-Test-ARM64.apk > SHA256SUMS.txt
+          printf '%s\n' 'Experimental ARM64 build. Login offline: test / test123.' 'Not verified on a physical phone. GM authorization requires server-side validation.' 'Keep this bundled-data build for personal testing; do not publish it as a release.' 'This is a separate test app (com.metin2.client.drakon2.test). Keep the original installed app and its progress untouched.' > README.txt
 
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Metin2-Nistor-ARM64
+          name: Drakon2-Test-ARM64
           path: ${{ runner.temp }}/apk-output/
           compression-level: 0
-          retention-days: 1
+          retention-days: 7
           if-no-files-found: error
 
       - name: Build summary
         if: success()
         run: |
-          echo 'APK experimental ARM64 generat. Descarca artifactul Metin2-Nistor-ARM64.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'APK experimental ARM64 generat. Descarca artifactul Drakon2-Test-ARM64.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Cont local: test / test123. Testul pe telefon si configurarea GM raman de facut.' >> "$GITHUB_STEP_SUMMARY"
 
