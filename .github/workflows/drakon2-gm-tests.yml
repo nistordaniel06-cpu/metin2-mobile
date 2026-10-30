@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'server/gm/**'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uimobilehud.py'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uidevoptions.py'
       - '.github/workflows/drakon2-gm-tests.yml'
   pull_request:
     paths:
@@ -26,3 +28,20 @@ jobs:
             server/gm/test_gm_command_policy.cpp -o /tmp/drakon2-gm-test
       - name: Run tests
         run: /tmp/drakon2-gm-test
+      - name: Validate Android GM touch entry
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          root = Path('r10dev.net OPENGL-ITJA/android/tools/data-overlay')
+          hud = (root / 'uimobilehud.py').read_text()
+          dev = (root / 'uidevoptions.py').read_text()
+          ast.parse(hud)
+          ast.parse(dev)
+          assert 'self.__OpenGMConsole' in hud
+          assert 'def __OpenGMConsole(self):' in hud
+          assert 'self.game.ShowConsole()' in hud
+          assert 'GM Console' in dev
+          assert 'def OnConsole(self):' in dev
+          print('Android GM menu wiring and Python syntax OK')
+          PY
