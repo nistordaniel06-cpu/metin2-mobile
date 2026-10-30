@@ -1,0 +1,28 @@
+name: Drakon2 GM policy tests
+
+on:
+  push:
+    paths:
+      - 'server/gm/**'
+      - '.github/workflows/drakon2-gm-tests.yml'
+  pull_request:
+    paths:
+      - 'server/gm/**'
+      - '.github/workflows/drakon2-gm-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gm-policy:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile GM permission tests
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            server/gm/test_gm_command_policy.cpp -o /tmp/drakon2-gm-test
+      - name: Run tests
+        run: /tmp/drakon2-gm-test
