@@ -599,6 +599,15 @@ class MobileHud(ui.Window):
 		else:
 			self.game.ShowName()
 
+	def __OpenGMConsole(self):
+		# Client UI only: server remains responsible for GM authorization.
+		try:
+			self.game.consoleEnable = True
+			self.game.ShowConsole()
+		except (AttributeError, RuntimeError):
+			import chat
+			chat.AppendChat(chat.CHAT_TYPE_INFO, "GM console unavailable in this build")
+
 	def __WheelEntries(self):
 		i = self.game.interface
 		return (
@@ -613,6 +622,7 @@ class MobileHud(ui.Window):
 			("Names", T + "g.sub", FRAMED, self.__ToggleNames),
 			("Ride", T + "mouse_button_move_and_attack_01.sub", FRAMED, lambda: net.SendChatPacket("/ride")),
 			("Settings", T + "system_button_01.sub", FRAMED, i.ToggleSystemDialog),
+			("GM", T + "character_button_01.sub", FRAMED, self.__OpenGMConsole),
 		)
 
 	def ApplyMode(self):
