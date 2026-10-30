@@ -10,6 +10,8 @@ on:
   pull_request:
     paths:
       - 'server/gm/**'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uimobilehud.py'
+      - 'r10dev.net OPENGL-ITJA/android/tools/data-overlay/uidevoptions.py'
       - '.github/workflows/drakon2-gm-tests.yml'
   workflow_dispatch:
 
