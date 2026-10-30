@@ -1,4 +1,4 @@
-# NISTOR2 — GM / Admin commands (implementation specification)
+# Drakon2 — GM / Admin commands (implementation specification)
 
 Status: **planned, not enabled in the Android client or live game server**.
 
