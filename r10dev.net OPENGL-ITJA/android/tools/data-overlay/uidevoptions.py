@@ -36,7 +36,7 @@ class DevOptionsWindow(ui.Window):
 	def __init__(self):
 		ui.Window.__init__(self)
 		self.SetWindowName("DevOptionsWindow")
-		self.H = self.PAD * 2 + 22 * 2 + self.ROW * (len(FONTS) + 3)
+		self.H = self.PAD * 2 + 22 * 2 + self.ROW * (len(FONTS) + 4)
 		self.SetSize(self.W, self.H)
 
 		self.board = ui.Bar()
@@ -49,7 +49,7 @@ class DevOptionsWindow(ui.Window):
 		self.title.SetParent(self)
 		self.title.SetPosition(self.W / 2, self.PAD)
 		self.title.SetHorizontalAlignCenter()
-		self.title.SetText("Dev options: font")
+		self.title.SetText("Drakon2: Dev / GM")
 		self.title.Show()
 
 		self.fontButtons = []
@@ -69,8 +69,11 @@ class DevOptionsWindow(ui.Window):
 		self.hudButton = _MakeButton(self, "", 0, y, ui.__mem_func__(self.OnToggleHud))
 		self.hudButton.SetPosition((self.W - self.hudButton.GetWidth()) / 2, y)
 		y += self.ROW
-		self.consoleBtn = _MakeButton(self, "Console", 0, y, ui.__mem_func__(self.OnConsole))
+		self.consoleBtn = _MakeButton(self, "GM Console", 0, y, ui.__mem_func__(self.OnConsole))
 		self.consoleBtn.SetPosition((self.W - self.consoleBtn.GetWidth()) / 2, y)
+		y += self.ROW
+		self.gmHelpBtn = _MakeButton(self, "GM Help", 0, y, ui.__mem_func__(self.OnGMHelp))
+		self.gmHelpBtn.SetPosition((self.W - self.gmHelpBtn.GetWidth()) / 2, y)
 		y += self.ROW
 		self.closeBtn = _MakeButton(self, "Close", 0, y, ui.__mem_func__(self.Hide))
 		self.closeBtn.SetPosition((self.W - self.closeBtn.GetWidth()) / 2, y)
@@ -102,6 +105,15 @@ class DevOptionsWindow(ui.Window):
 			return
 		wnd.consoleEnable = True
 		wnd.ShowConsole()
+
+	def OnGMHelp(self):
+		# Console is an input surface only. GM privileges are validated by the server.
+		try:
+			import chat
+			chat.AppendChat(chat.CHAT_TYPE_INFO, "Drakon2: GM commands depend on server role and support")
+			chat.AppendChat(chat.CHAT_TYPE_INFO, "Console sends commands; server must authorize each action.")
+		except (ImportError, AttributeError):
+			pass
 
 	def OnPickFont(self, path):
 		if not app.SetPortFont("" if path == "default" else path, 1):
