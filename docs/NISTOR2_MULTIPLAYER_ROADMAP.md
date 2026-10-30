@@ -1,4 +1,4 @@
-# NISTOR2 România — Multiplayer Foundation
+# Drakon2 România — Multiplayer Foundation
 
 This branch prepares the existing Android client and compatible m2dev server for a persistent Romanian Oldschool-modernized realm. **No existing offline gameplay or production catalog entries are modified.**
 
@@ -23,7 +23,7 @@ This branch prepares the existing Android client and compatible m2dev server for
 
 ## Proposed realm settings (not yet enabled)
 
-- Name: NISTOR2 Romania
+- Name: Drakon2 Romania
 - Style: Oldschool modernized; PvM and PvP
 - Initial level cap target: 120 (subject to data and balancing)
 - XP target: x3 (requires server configuration)
