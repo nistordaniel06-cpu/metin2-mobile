@@ -1,5 +1,5 @@
 #pragma once
-// NISTOR2: standalone, server-side GM command policy.
+// Drakon2: standalone, server-side GM command policy.
 // Integration with m2dev command dispatcher is still required.
 #include <algorithm>
 #include <cctype>
@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace nistor2 {
+namespace drakon2 {
 enum class Role { Player=0, Helper=1, GM=2, Admin=3, Owner=4 };
 struct Decision {
     bool allowed;
@@ -49,4 +49,4 @@ inline Decision authorize(Role serverAuthenticatedRole, const std::string& input
     if (command=="shutdown") return {false,"console-only command",command,{}};
     return {true,"authorized; handler must validate arguments and audit",command,args};
 }
-} // namespace nistor2
+} // namespace drakon2
