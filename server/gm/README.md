@@ -1,4 +1,4 @@
-# NISTOR2 GM authorization policy — phase 1
+# Drakon2 GM authorization policy — phase 1
 
 This directory contains a **standalone C++ permission gate and assertions**, not a wired game command dispatcher.
 
