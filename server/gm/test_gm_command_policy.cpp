@@ -1,7 +1,7 @@
 #include "gm_command_policy.h"
 #include <cassert>
 #include <iostream>
-using namespace nistor2;
+using namespace drakon2;
 int main() {
     assert(!authorize(Role::Player,"/item 19 1").allowed);
     assert(!authorize(Role::Player,"/gmhelp").allowed);
